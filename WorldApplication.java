@@ -34,7 +34,7 @@ class WorldApplication {
 	public static void main (String args[]) {
 		
 		int worldSize = 4;
-		int numTrials = 1;
+		int numTrials = 10000;
 		int maxSteps = 50;
 		
 		boolean nonDeterministicMode = false;

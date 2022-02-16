@@ -158,12 +158,13 @@ class AgentFunction {
 			for(Map.Entry<String, Square> item: squares.entrySet()) {
 				Square square = item.getValue();
 				if(!square.isSafe && !square.isWumpus && !square.isPit && !square.isWall) {
-					if(rand.nextBoolean()) {
-						square.isPit = true;
-					}
-					else {
-						square.isWumpus = true;
-					}
+//					if(rand.nextBoolean()) {
+//						square.isPit = true;
+//					}
+//					else {
+//						square.isWumpus = true;
+//					}
+					square.isPit = true;
 				}
 			}
 		}
