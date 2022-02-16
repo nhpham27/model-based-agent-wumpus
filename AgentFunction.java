@@ -40,7 +40,7 @@ class AgentFunction {
 	private boolean alreadyShot;
 	private int worldStateSize = 6;
 	private Square[][] state;
-	private boolean debugMode = true;
+	private boolean debugMode = false;
 	public AgentFunction()
 	{
 		// for illustration purposes; you may delete all code
