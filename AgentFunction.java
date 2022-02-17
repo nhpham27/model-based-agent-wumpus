@@ -42,6 +42,7 @@ class AgentFunction {
 	private int worldStateSize = 6;
 	private Square[][] state;
 	static boolean debugMode = false;
+	static int trial = 10000;
 	public AgentFunction()
 	{
 		// for illustration purposes; you may delete all code
@@ -286,8 +287,8 @@ class AgentFunction {
 			squares = this.getAroundSquares();
 		}
 		
-		if(agentLoc.noGold < 9)
-			agentLoc.noGold += 3;
+		if(agentLoc.noGold < 10)
+			agentLoc.noGold += 1;
 		// update the percepts in current square
 		
 		if(stench == true) {
@@ -312,6 +313,7 @@ class AgentFunction {
 		// if the agent senses bump, mark the square in front as Wall
 		if(bump == true) {
 			squares.get("front").isWall = true;
+			squares.get("front").noGold = 10;
 		}
 		
 		// if there is a scream, mark all squares labeled as Wumpus as safe
@@ -397,12 +399,12 @@ class AgentFunction {
 		Square leftSquare = squares.get("left");
 		Square rightSquare = squares.get("right");
 		Square backSquare = squares.get("back");
-		
+		Square agentLoc = this.getAgentLocation();
 //		System.out.println("front pit: " + frontSquare.isPit);
 //		System.out.println("front wumpus: " + frontSquare.isWumpus);
 		
 		if(frontSquare.isWall) {
-			return Action.TURN_LEFT;
+			return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
 		}
 
 		if(frontSquare.isWumpus > 0 && !this.alreadyShot) {
@@ -411,17 +413,34 @@ class AgentFunction {
 		
 		if(frontSquare.isWumpus > 0 || frontSquare.isPit > 0) {
 			int blockAgent = 10;
+			
 			if((leftSquare.isPit > 0 || leftSquare.isWumpus > 0 || leftSquare.isWall)
 					&& (rightSquare.isPit > 0 || rightSquare.isWumpus > 0 || rightSquare.isWall)
 					&& (backSquare.isPit > 0 || backSquare.isWumpus > 0 || backSquare.isWall)) {
-				if(leftSquare.noGold > 8 || rightSquare.noGold > 8 || backSquare.noGold > 8)
+				return Action.NO_OP;
+			}
+			else {
+				int count = 0;
+				if(leftSquare.isPit > 0 || leftSquare.isWumpus > 0) {
+					count++;
+				}
+				if(rightSquare.isPit > 0 || rightSquare.isWumpus > 0) {
+					count++;
+				}
+				if(backSquare.isPit > 0 || backSquare.isWumpus > 0) {
+					count++;
+				}
+				if(frontSquare.isPit > 0 || frontSquare.isWumpus > 0) {
+					count++;
+				}
+				if(count >= 3 && (leftSquare.noGold > 8 || rightSquare.noGold > 8 
+					|| backSquare.noGold > 8 || frontSquare.noGold > 8)) {
 					blockAgent = 0;
-				else
-					return Action.NO_OP;
+				}
 			}
 			
 			if(rand.nextInt(10) < (frontSquare.getMaxProb() + blockAgent)) {
-				return Action.TURN_LEFT;
+				return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
 			}
 			else {
 				//System.out.println("forward: " + temp + "-" + (frontSquare.getMaxProb() + 6));
@@ -429,17 +448,44 @@ class AgentFunction {
 			}
 		}
 		else {
+			if((leftSquare.isPit > 0 || leftSquare.isWumpus > 0 || leftSquare.isWall)
+					&& (rightSquare.isPit > 0 || rightSquare.isWumpus > 0 || rightSquare.isWall)
+					&& (backSquare.isPit > 0 || backSquare.isWumpus > 0 || backSquare.isWall)) {
+				return Action.GO_FORWARD;
+			}
+//			
+			if(frontSquare.noGold < rightSquare.noGold
+				&& frontSquare.noGold < leftSquare.noGold) {
+				return Action.GO_FORWARD;
+			}
+			if(leftSquare.noGold < frontSquare.noGold 
+				&& leftSquare.noGold < rightSquare.noGold
+				&& leftSquare.noGold < frontSquare.noGold) {
+				return Action.TURN_LEFT;
+			}
+			if(rightSquare.noGold < leftSquare.noGold 
+				&& rightSquare.noGold < frontSquare.noGold) {
+				return Action.TURN_RIGHT;
+			}
 			// if the front square is safe and
 			// the square is unvisited, proceed
 			// if it is visited, there is 20% to
 			// go forward
-			if(rand.nextInt(10) < frontSquare.noGold) {
-				return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
-			}
 			else {
-				
-				return Action.GO_FORWARD;
+//				if(rand.nextInt(10) < 8)
+//					return Action.GO_FORWARD;
+//				else
+//					return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
+				if(rand.nextInt(10) < frontSquare.noGold)
+					return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
+				else
+					return Action.GO_FORWARD;
 			}
+			
+//			if(rand.nextInt(10) < frontSquare.noGold)
+//				return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
+//			else
+//				return Action.GO_FORWARD;
 		}
 	}
 }
