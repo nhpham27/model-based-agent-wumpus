@@ -33,7 +33,7 @@ class Simulation {
 	private TransferPercept transferPercept;
 	private BufferedWriter outputWriter;
 	
-	private boolean PRINT_ENABLE = false;
+	private boolean PRINT_ENABLE = AgentFunction.debugMode;
 	
 	public Simulation(Environment wumpusEnvironment, int maxSteps, BufferedWriter outWriter, boolean nonDeterministic) {
 		
