@@ -125,6 +125,8 @@ class AgentFunction {
 						System.out.print("[X]");
 				else if(temp.isWumpus > 0)
 					System.out.print("[W]");
+				else if(temp.agentDirection == ' ')
+					System.out.print("[" + temp.noGold + "]");
 				else
 					System.out.print("[" + temp.agentDirection + "]");
 			}
@@ -287,7 +289,7 @@ class AgentFunction {
 			squares = this.getAroundSquares();
 		}
 		
-		if(agentLoc.noGold < 10)
+		if(agentLoc.noGold < 9)
 			agentLoc.noGold += 1;
 		// update the percepts in current square
 		
@@ -308,7 +310,7 @@ class AgentFunction {
 		}
 		
 		// check all the squares and update the probabilities
-		this.updateProbabilities();
+		this.updateSquares();
 		// update the squares around the agent based on the percept
 		// if the agent senses bump, mark the square in front as Wall
 		if(bump == true) {
@@ -341,7 +343,7 @@ class AgentFunction {
 		}
 	}
 	
-	private void updateProbabilities() {
+	private void updateSquares() {
 		// loop through all squares
 		Square square = null;
 		for(int i = 1;i < this.worldStateSize - 1; i++) {
@@ -357,17 +359,39 @@ class AgentFunction {
 				
 				if(square.isSafe == false) {
 					square.isWumpus = 0;
+					Square temp = null;
 					for(Square s : aroundSquares) {
 						// visited squares will have noGold > 0
 						if(s.noGold > 0) {
 							if(s.hasStench) {
 								square.isWumpus += 3;
+								// record the square that has 
+								// probability of having wumpus
+								// greater than 3
+								if(s.isWumpus > 3) {
+									temp = s;
+								}
 							}
 							else {
 								square.isWumpus = 0;
 								break;
 							}
 						}
+					}
+					
+					if(temp != null) {
+						for(int a = this.worldStateSize - 1;a >= 0; a--) {
+							for(int b = 0;b < this.worldStateSize; b++) {
+								if(state[a][b].isWumpus > 0 && state[a][b].isPit == 0) {
+									state[a][b].isWumpus = 0;
+									state[a][b].noGold = 0;
+									state[a][b].isSafe = true;
+								}
+							}
+						}
+						temp.isWumpus = 10;
+						temp.noGold = 10;
+						temp.isSafe = false;
 					}
 					
 					square.isPit = 0;
@@ -403,6 +427,11 @@ class AgentFunction {
 //		System.out.println("front pit: " + frontSquare.isPit);
 //		System.out.println("front wumpus: " + frontSquare.isWumpus);
 		
+		// if there's no gold, stop exploring the environment
+		if(this.checkGold() == false) {
+			return Action.NO_OP;
+		}
+		
 		if(frontSquare.isWall) {
 			return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
 		}
@@ -421,30 +450,31 @@ class AgentFunction {
 			}
 			else {
 				int count = 0;
-				if(leftSquare.isPit > 0 || leftSquare.isWumpus > 0) {
+				if(leftSquare.isPit > 0) {
 					count++;
 				}
-				if(rightSquare.isPit > 0 || rightSquare.isWumpus > 0) {
+				if(rightSquare.isPit > 0) {
 					count++;
 				}
-				if(backSquare.isPit > 0 || backSquare.isWumpus > 0) {
+				if(backSquare.isPit > 0) {
 					count++;
 				}
-				if(frontSquare.isPit > 0 || frontSquare.isWumpus > 0) {
+				if(frontSquare.isPit > 0) {
 					count++;
 				}
-				if(count >= 3 && (leftSquare.noGold > 8 || rightSquare.noGold > 8 
-					|| backSquare.noGold > 8 || frontSquare.noGold > 8)) {
+				if(count >= 2
+					&& agentLoc.noGold > 8) {
 					blockAgent = 0;
 				}
 			}
 			
-			if(rand.nextInt(10) < (frontSquare.getMaxProb() + blockAgent)) {
-				return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
+			if(frontSquare.isPit == 3
+				&& (leftSquare.isPit > 3 || rightSquare.isPit > 3) 
+				&& blockAgent == 0) {
+				return Action.GO_FORWARD;
 			}
 			else {
-				//System.out.println("forward: " + temp + "-" + (frontSquare.getMaxProb() + 6));
-				return Action.GO_FORWARD;
+				return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
 			}
 		}
 		else {
@@ -454,8 +484,8 @@ class AgentFunction {
 				return Action.GO_FORWARD;
 			}
 //			
-			if(frontSquare.noGold < rightSquare.noGold
-				&& frontSquare.noGold < leftSquare.noGold) {
+			if(frontSquare.noGold <= rightSquare.noGold
+				&& frontSquare.noGold <= leftSquare.noGold) {
 				return Action.GO_FORWARD;
 			}
 			if(leftSquare.noGold < frontSquare.noGold 
@@ -472,20 +502,31 @@ class AgentFunction {
 			// if it is visited, there is 20% to
 			// go forward
 			else {
-//				if(rand.nextInt(10) < 8)
-//					return Action.GO_FORWARD;
-//				else
-//					return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
 				if(rand.nextInt(10) < frontSquare.noGold)
 					return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
 				else
 					return Action.GO_FORWARD;
 			}
-			
-//			if(rand.nextInt(10) < frontSquare.noGold)
-//				return rand.nextBoolean() ? Action.TURN_LEFT : Action.TURN_RIGHT;
-//			else
-//				return Action.GO_FORWARD;
 		}
+	}
+	
+	// check if there exists gold in the empty squares
+	private boolean checkGold() {
+		boolean hasGold = false, hasPath = true;
+		for(int i = 1;i < this.worldStateSize - 1; i++) {
+			for(int j = 1;j < this.worldStateSize - 1; j++) {
+				if(state[i][j].noGold == 0)
+					hasGold = true;
+			}
+		}
+		
+//		for(int i = 1;i < this.worldStateSize - 1; i++) {
+//			for(int j = 1;j < this.worldStateSize - 1; j++) {
+//				if(state[i][j].noGold == 0)
+//					hasGold = true;
+//			}
+//		}
+		
+		return (hasGold && hasPath);
 	}
 }
